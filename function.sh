@@ -28,6 +28,15 @@ EOF
 }
 
 
+function validate_ip_address() {
+    # validation: format for IP address
+
+    local result
+    result=$(echo "${1}" | grep -E "^(([1-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([1-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")
+    echo "${result}"
+}
+
+
 while (( $# > 0 ))
 do
     case $1 in
@@ -50,6 +59,12 @@ do
             exit 1
             ;;
         *)
+            result=$(validate_ip_address "${1}")
+            if [ ! "${result}" ] ; then
+                echo "${1} is not IP Address." 1>&2
+                exit 2
+            fi
+
             IP_ADDRESS="${1}/32"
             echo "IP_ADDRESS:${IP_ADDRESS}"
             ;;
