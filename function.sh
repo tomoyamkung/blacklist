@@ -6,14 +6,24 @@ set -euo pipefail
 function usage() {
     cat <<EOF 1>&2
 Description:
-    $(basename ${0}) is a tool for ...
+    $(basename "${0}") is a tool that adds an IP address to your AWS WAF. The IP address is added to the IP set called BLACK_LIST.
+    [Caution] Please register BLACK_LIST in advance.
+
+    function.sh は AWS WAF に IP アドレスを追加するツールです。この IP アドレスは BLACK_LIST という IP Sets に追加されます。
+    【注意】BLACK_LIST は事前に登録しておいてください。
 
 Usage:
-    $(basename ${0}) --profile PROFILE_NAME ip_address
+    $(basename "${0}") --profile PROFILE_NAME ip_address
 
 Options:
-    --help          print this
-    --profile       TDB
+    --help      print this.
+                これを出力します。
+    --profile   Specify the profile of the AWS account to which you want to add the IP address.
+                IP アドレスを追加したい AWS アカウントのプロファイルを指定します。
+
+Caution:
+    ip_address  Since only CIDR addresses of / 8, / 16, / 24, / 32 can be registered, "/ 32" is automatically added to the argument address.
+                登録できるアドレスは /8, /16, /24, /32 の CIDR アドレスのみとなるため、引数のアドレスに "/32" を自動で追加します。
 EOF
 }
 
@@ -40,7 +50,7 @@ do
             exit 1
             ;;
         *)
-            IP_ADDRESS="${1}/32"  # TODO 保管される旨を README に追記する
+            IP_ADDRESS="${1}/32"
             echo "IP_ADDRESS:${IP_ADDRESS}"
             ;;
     esac
