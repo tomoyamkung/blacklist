@@ -63,6 +63,20 @@ SCOPE=REGIONAL  # CloudFront は対象外なので REGIONAL で固定
 IPSETS_NAME=BLACK_LIST  # 対象とする IP Sets の名前は BLACK_LIST で固定
 
 
+function generate_addresses() {
+    # specifications: must be array for JSON format.
+    # JSON の配列で指定する仕様になっている。
+    # for example: ["192.0.2.44/32", "192.0.2.0/24", "192.0.0.0/16"]
+
+    local registered
+    registered=$(aws wafv2 get-ip-set --name "${IPSETS_NAME}" --id "${ID}" --scope "${SCOPE}" --profile "${PROFILE}" \
+            | jq '.IPSet.Addresses' | grep -v "\[" | grep -v "\]" | tr -d ' ' | tr -d '"' | tr -d "\n")
+
+    local update_ip_addesses
+    update_ip_addesses=$(echo '["'"${registered},${1}"'"]' | sed -e 's/,/", "/g')
+    echo "${update_ip_addesses}"
+}
+
 echo -n "ID:"
 ID=$(aws wafv2 list-ip-sets --output table --scope "${SCOPE}" --profile "${PROFILE}" \
         | grep "${IPSETS_NAME}" | awk '{print $5}')
@@ -73,16 +87,15 @@ TOKEN=$(aws wafv2 get-ip-set --name "${IPSETS_NAME}" --id "${ID}" --scope "${SCO
         | grep "LockToken" | tr -d \" | awk '{print $2}')
 echo "${TOKEN}"
 
-# echo -n "REGISTERED_IP_ADDRESSES:"  # debug message
-REGISTERED=$(aws wafv2 get-ip-set --name "${IPSETS_NAME}" --id "${ID}" --scope "${SCOPE}" --profile "${PROFILE}" \
-        | jq '.IPSet.Addresses' | grep -v "\[" | grep -v "\]" | tr -d ' ' | tr -d '"' | tr -d "\n")
-# echo "${REGISTERED}"  # debug message
-
-UPDATE_IP_ADDESSES=$(echo '["'"${REGISTERED},$IP_ADDRESS"'"]' | sed -e 's/,/", "/g')
+UPDATE_IP_ADDESSES=$(generate_addresses "${IP_ADDRESS}")
 echo "UPDATE_IP_ADDESSES:${UPDATE_IP_ADDESSES}"
+
 aws wafv2 update-ip-set --name "${IPSETS_NAME}" --id "${ID}" --addresses "${UPDATE_IP_ADDESSES}" \
     --lock-token "${TOKEN}" --scope "${SCOPE}" --profile "${PROFILE}" \
     > /dev/null
 
-# 追加されたことを確認するため get-ip-set を実行する
+# Run get-ip-set to confirm that it has been added.
+# 追加されたことを確認するため get-ip-set を実行する。
 aws wafv2 get-ip-set --name "${IPSETS_NAME}" --id "${ID}" --scope "${SCOPE}" --profile "${PROFILE}"
+
+exit 0
