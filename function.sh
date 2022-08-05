@@ -31,8 +31,7 @@ EOF
 function validate_ip_address() {
     # validation: format for IP address
 
-    local result
-    result=$(echo "${1}" | grep -E "^(([1-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([1-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")
+    local -r result=$(echo "${1}" | grep -E "^(([1-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([1-9]?[0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")
     echo "${result}"
 }
 
@@ -51,6 +50,7 @@ do
             else
                 PROFILE="${2}"
                 echo "PROFILE:${PROFILE}"
+                readonly PROFILE
                 shift
             fi
             ;;
@@ -67,6 +67,7 @@ do
 
             IP_ADDRESS="${1}/32"
             echo "IP_ADDRESS:${IP_ADDRESS}"
+            readonly IP_ADDRESS
             ;;
     esac
     shift
@@ -75,7 +76,9 @@ done
 
 # 定数定義
 SCOPE=REGIONAL  # CloudFront は対象外なので REGIONAL で固定
+readonly SCOPE
 IPSETS_NAME=BLACK_LIST  # 対象とする IP Sets の名前は BLACK_LIST で固定
+readonly IPSETS_NAME
 
 
 function generate_addresses() {
@@ -83,12 +86,10 @@ function generate_addresses() {
     # JSON の配列で指定する仕様になっている。
     # for example: ["192.0.2.44/32", "192.0.2.0/24", "192.0.0.0/16"]
 
-    local registered
-    registered=$(aws wafv2 get-ip-set --name "${IPSETS_NAME}" --id "${ID}" --scope "${SCOPE}" --profile "${PROFILE}" \
+    local -r registered=$(aws wafv2 get-ip-set --name "${IPSETS_NAME}" --id "${ID}" --scope "${SCOPE}" --profile "${PROFILE}" \
             | jq '.IPSet.Addresses' | grep -v "\[" | grep -v "\]" | tr -d ' ' | tr -d '"' | tr -d "\n")
 
-    local update_ip_addesses
-    update_ip_addesses=$(echo '["'"${registered},${1}"'"]' | sed -e 's/,/", "/g')
+    local -r update_ip_addesses=$(echo '["'"${registered},${1}"'"]' | sed -e 's/,/", "/g')
     echo "${update_ip_addesses}"
 }
 
